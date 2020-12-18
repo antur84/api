@@ -162,3 +162,59 @@ foreach ($users as $user){
 }
 ?>
 ```
+
+## JavaScript
+Here is a an example how to use `JavaScript` with NodeJS to retrieve an `access_token` and use it to `GET` active users and list the first name of them all
+
+```JavaScript
+// Not production ready piece of code, created for demo purpose.
+// Your token should be retrieved and preferably refreshed only when needed, to avoid creating a new token each time.
+// Use a lib for the http calls to avoid the callback/stream mess is probably a good move, axios is a good one.
+
+var http = require("https");
+// Change these.
+const companyId = REPLACE;
+const accessId = "REPLACE";
+const accessSecret = "REPLACE";
+
+const apiBaseUrl = "https://api.cinode.com";
+const tokenUrl = `${apiBaseUrl}/token`;
+const usersUrl = `${apiBaseUrl}/v0.1/companies/${companyId}/users/`;
+const auth = Buffer.from(`${accessId}:${accessSecret}`).toString("base64");
+const getTokenOptions = {
+  method: "GET",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Basic ${auth}`,
+  },
+};
+http.get(tokenUrl, getTokenOptions, (resp) => {
+  let tokenResponse;
+  console.log("GET TOKEN STATUS", resp.statusCode);
+  resp.on("data", function (chunk) {
+    console.log("GET TOKEN BODY", chunk.toString());
+    tokenResponse = JSON.parse(chunk.toString());
+  });
+  resp.on("end", function () {
+    console.log("GETTING SOME USERS");
+    const getUsersOptions = {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tokenResponse.access_token}`,
+      },
+    };
+    http.get(usersUrl, getUsersOptions, (usersResp) => {
+      console.log("GET USERS STATUS", usersResp.statusCode);
+      let userData = "";
+      usersResp.on("data", function (userChunk) {
+        userData += userChunk;
+      });
+      usersResp.on("end", function () {
+        const allUsers = JSON.parse(userData.toString());
+        allUsers.forEach((usr) => console.log(usr.firstName));
+      });
+    });
+  });
+});
+```
